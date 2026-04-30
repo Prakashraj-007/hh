@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { ShieldCheck, UploadCloud, AlertCircle, CheckCircle, Clock, MessageSquare } from 'lucide-react';
+import { ShieldCheck, UploadCloud, CheckCircle, Clock, MessageSquare, AlertCircle } from 'lucide-react';
 import { calculateRiskScore } from '../../utils/riskEngine';
 import { analyzeSearchIntent, markSessionAsReturned } from '../../utils/searchIntentEngine';
+import { analyzeImage } from '../../utils/imageForensics';
 import FraudChatbot from '../../components/FraudChatbot';
 
 const ReturnForm = () => {
@@ -25,9 +26,40 @@ const ReturnForm = () => {
     result: null
   });
   const [hasImage, setHasImage] = useState(false);
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreviewUrl, setImagePreviewUrl] = useState(null); // customer-visible photo preview
+  const [imageAnalysis, setImageAnalysis] = useState(null); // forensics result (admin only)
+  const [imageAnalyzing, setImageAnalyzing] = useState(false);
+  const fileInputRef = useRef(null);
   const [showChatbot, setShowChatbot] = useState(false);
   const [savedClaim, setSavedClaim] = useState(null);
   const [chatCompleted, setChatCompleted] = useState(false);
+
+  // Handle real image upload + forensic analysis
+  const handleImageUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Revoke previous preview URL to free memory
+    if (imagePreviewUrl) URL.revokeObjectURL(imagePreviewUrl);
+
+    // Create a local object URL for the customer photo preview
+    const previewUrl = URL.createObjectURL(file);
+    setImagePreviewUrl(previewUrl);
+    setImageFile(file);
+    setHasImage(true);
+    setImageAnalysis(null);
+    setImageAnalyzing(true);
+    try {
+      const result = await analyzeImage(file);
+      setImageAnalysis(result);
+    } catch (err) {
+      console.error('Image forensics failed:', err);
+      setImageAnalysis({ imageScore: 0, flags: ['ANALYSIS_FAILED'], elaFlag: false, hashFlag: false, exifStatus: 'ERROR', elaMean: 0, hashDistance: 64, dateTaken: null, elaImageDataUrl: null });
+    } finally {
+      setImageAnalyzing(false);
+    }
+  };
 
   // Dynamic window calculation
   const daysUsed = parseInt(formData.requestedOnDay);
@@ -61,7 +93,8 @@ const ReturnForm = () => {
           policyDays: order.policyDays,
           category: order.category,
           amount: order.amount,
-          hasImage: hasImage
+          hasImage: hasImage,
+          imageForensics: imageAnalysis  // real forensics result
         };
         const existingClaims = JSON.parse(localStorage.getItem('claims') || '[]');
 
@@ -82,33 +115,51 @@ const ReturnForm = () => {
           setAnalysisState({ stage: stages.length, result });
           setStep(3); // Move to Result Step
           
+          // Generate a random IP for this session's networking forensic context
+          const randomIP = `192.168.${Math.floor(Math.random()*255)}.${Math.floor(Math.random()*255)}`;
+          const locationData = ['Mumbai, India', 'Bangalore, India', 'Delhi, India', 'Hyderabad, India', 'Chennai, India'][Math.floor(Math.random()*5)];
+          
+          // Format Account Age nicely
+          const totalMonths = Math.floor(loggedInUser.accountAgeDays / 30);
+          const years = Math.floor(totalMonths / 12);
+          const months = totalMonths % 12;
+          const formattedAge = years > 0 ? `${years}Y ${months}M` : `${months} Months`;
+
           // Save result to local storage for Admin Portal to see
           const newClaim = {
             id: `CLM-${Math.floor(Math.random()*10000)}`,
             orderId: orderId,
             customer: loggedInUser.name,
             product: order.product,
+            category: order.category,
+            reason: formData.reason,
+            description: formData.description,
             amount: order.amount,
             policyDays: order.policyDays,
             requestedOnDay: claimData.requestedOnDay,
+            ipAddress: randomIP,
+            location: locationData,
             // Risk engine scores
             score: result.score,
             behaviorScore: result.behaviorScore,
             behaviorBreakdown: result.behaviorBreakdown,
             imageScore: result.imageScore,
+            imageForensics: imageAnalysis,
             networkScore: result.networkScore,
             networkBreakdown: result.networkBreakdown,
             wardrobingScore: result.wardrobingScore,
             wardrobingBreakdown: result.wardrobingBreakdown,
-            // Customer intelligence fields (for Admin Dashboard)
+            // Customer intelligence fields
             trustScore: result.trustScore,
             accountAgeDays: loggedInUser.accountAgeDays,
+            formattedAccountAge: formattedAge,
             totalSpend: loggedInUser.totalSpend,
             returnRatio: ((loggedInUser.totalReturns || 0) / Math.max(1, loggedInUser.totalOrders || 1)),
             status: result.status,
             riskLevel: result.riskLevel,
             logs: result.logs
           };
+
           const existing = JSON.parse(localStorage.getItem('claims') || '[]');
           localStorage.setItem('claims', JSON.stringify([newClaim, ...existing]));
           setSavedClaim(newClaim);
@@ -228,22 +279,70 @@ const ReturnForm = () => {
             </div>
 
             <div className="input-group mb-8">
-              <label className="input-label">Upload Proof Images</label>
-              <div 
-                onClick={() => setHasImage(true)}
-                className={`border-2 border-dashed rounded-lg p-8 flex flex-col items-center justify-center cursor-pointer transition ${hasImage ? 'border-success bg-success/5 text-success' : 'border-border-color text-text-secondary hover:bg-bg-secondary'}`}
+              <label className="input-label">Upload Proof Image</label>
+
+              {/* Hidden real file input */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/jpg,image/png,image/webp"
+                className="hidden"
+                onChange={handleImageUpload}
+                id="proof-image-input"
+              />
+
+              {/* Upload zone — clean customer view, NO forensics details shown */}
+              <div
+                onClick={() => fileInputRef.current?.click()}
+                className={`relative border-2 border-dashed rounded-xl overflow-hidden cursor-pointer transition ${
+                  hasImage
+                    ? imageAnalyzing
+                      ? 'border-accent/50'
+                      : 'border-success'
+                    : 'border-border-color hover:border-accent/50'
+                }`}
+                style={{ minHeight: '180px' }}
               >
-                {hasImage ? (
-                  <>
-                    <CheckCircle size={32} className="mb-2" />
-                    <p className="font-semibold">Image Uploaded Successfully</p>
-                    <p className="text-xs opacity-70">IMG_2904_PROOF.JPG (1.2 MB)</p>
-                  </>
-                ) : (
-                  <>
-                    <UploadCloud size={32} className="mb-2" />
-                    <p>Click or drag images here</p>
-                  </>
+                {/* Empty state */}
+                {!hasImage && (
+                  <div className="flex flex-col items-center justify-center p-10 text-text-secondary">
+                    <UploadCloud size={36} className="mb-3 opacity-60" />
+                    <p className="font-semibold text-base">Click to upload proof image</p>
+                    <p className="text-xs opacity-50 mt-1.5">JPG, PNG or WebP · Max 10 MB</p>
+                  </div>
+                )}
+
+                {/* Verifying spinner — shown over the preview thumbnail while forensics run */}
+                {hasImage && imageAnalyzing && (
+                  <div className="flex flex-col items-center justify-center p-10 text-accent">
+                    <div className="w-10 h-10 rounded-full border-2 border-accent border-t-transparent animate-spin mb-3" />
+                    <p className="font-semibold text-base">Verifying image…</p>
+                    <p className="text-xs opacity-50 mt-1">Please wait</p>
+                  </div>
+                )}
+
+                {/* Photo preview — actual customer image shown as a thumbnail */}
+                {hasImage && !imageAnalyzing && imagePreviewUrl && (
+                  <div className="relative">
+                    {/* The actual uploaded photo */}
+                    <img
+                      src={imagePreviewUrl}
+                      alt="Proof image"
+                      className="w-full object-cover rounded-lg"
+                      style={{ maxHeight: '260px', objectFit: 'cover' }}
+                    />
+                    {/* Success overlay bar at the bottom */}
+                    <div className="absolute bottom-0 left-0 right-0 bg-black/60 backdrop-blur-sm px-4 py-2.5 flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-success">
+                        <CheckCircle size={16} />
+                        <span className="text-sm font-semibold">Image Received</span>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-white text-xs opacity-80 max-w-[160px] truncate">{imageFile?.name}</p>
+                        <p className="text-white text-[10px] opacity-50">{imageFile ? (imageFile.size / 1024).toFixed(0) + ' KB' : ''} · Click to replace</p>
+                      </div>
+                    </div>
+                  </div>
                 )}
               </div>
             </div>
@@ -336,6 +435,7 @@ const ReturnForm = () => {
         {showChatbot && savedClaim && (
           <FraudChatbot
             claim={savedClaim}
+            userProfile={loggedInUser}
             onClose={() => setShowChatbot(false)}
             onComplete={(summary) => {
               setShowChatbot(false);
@@ -343,6 +443,7 @@ const ReturnForm = () => {
             }}
           />
         )}
+
       </div>
     </div>
   );

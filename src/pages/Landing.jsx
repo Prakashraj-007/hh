@@ -1,93 +1,73 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
-import { ShieldCheck, Activity, Camera, Network, TrendingUp, Search } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { ShieldCheck, User, LayoutDashboard, ChevronRight } from 'lucide-react';
 
 const Landing = () => {
+  const navigate = useNavigate();
+
   return (
-    <div className="flex flex-col min-h-screen">
-      {/* Navbar */}
-      <nav className="container flex justify-between items-center py-6">
-        <div className="flex items-center gap-2">
-          <ShieldCheck className="text-accent" size={32} />
-          <span className="text-2xl font-bold">ReturnShield <span className="text-accent">AI</span></span>
+    <div className="min-h-screen bg-bg-primary flex flex-col items-center justify-center p-6 bg-[radial-gradient(circle_at_top,_var(--tw-gradient-stops))] from-[#1e1e2e] via-bg-primary to-bg-primary">
+      {/* Brand Header */}
+      <div className="flex items-center gap-3 mb-16 animate-fade-in">
+        <ShieldCheck className="text-accent" size={48} />
+        <div>
+          <h1 className="text-4xl font-bold tracking-tight">ReturnShield <span className="text-accent">AI</span></h1>
+          <p className="text-text-muted text-sm font-medium tracking-widest uppercase">Forensic Claims Intelligence</p>
         </div>
-        <div className="flex gap-4">
-          <Link to="/customer/login" className="btn btn-outline">Customer Portal</Link>
-          <Link to="/admin" className="btn btn-primary">Admin Portal</Link>
-        </div>
-      </nav>
+      </div>
 
-      {/* Hero Section */}
-      <main className="flex-1 flex flex-col items-center justify-center text-center px-4 py-20">
-        <h1 className="text-4xl md:text-6xl font-bold mb-6 max-w-4xl animate-fade-in">
-          Detect Return Fraud <br/> <span className="text-accent">Before Refunds Happen</span>
-        </h1>
-        <p className="text-xl text-secondary mb-10 max-w-2xl animate-fade-in" style={{animationDelay: '0.1s'}}>
-          AI-powered fraud intelligence for e-commerce returns. Detect suspicious behavior, image manipulation, linked accounts, and return policy abuse in real time.
-        </p>
+      {/* Portal Selection Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-4xl">
         
-        <div className="flex gap-6 animate-fade-in" style={{animationDelay: '0.2s'}}>
-          <Link to="/customer/login" className="btn btn-outline text-lg px-8 py-3">Try Customer Demo</Link>
-          <Link to="/admin" className="btn btn-primary text-lg px-8 py-3">View Admin Dashboard</Link>
+        {/* Customer Portal Card */}
+        <div 
+          onClick={() => navigate('/customer/login')}
+          className="group relative cursor-pointer"
+        >
+          <div className="absolute -inset-0.5 bg-gradient-to-r from-accent to-primary rounded-3xl blur opacity-20 group-hover:opacity-40 transition duration-500"></div>
+          <div className="relative card h-full p-8 flex flex-col items-center text-center transition-all duration-300 group-hover:translate-y-[-4px] group-hover:bg-bg-hover">
+            <div className="w-16 h-16 rounded-2xl bg-bg-secondary flex items-center justify-center text-accent mb-6 group-hover:scale-110 transition-transform duration-500">
+              <User size={32} />
+            </div>
+            <h2 className="text-2xl font-bold mb-3">Customer Portal</h2>
+            <p className="text-text-secondary text-sm leading-relaxed mb-8">
+              Experience the seamless, AI-guided return process. Submit claims, verify products, and chat with the forensic bot.
+            </p>
+            <div className="mt-auto flex items-center gap-2 text-accent font-semibold group-hover:gap-3 transition-all">
+              Launch Demo <ChevronRight size={18} />
+            </div>
+          </div>
         </div>
-      </main>
 
-      {/* Stats Section */}
-      <section className="bg-bg-secondary py-16">
-        <div className="container grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
-          <div>
-            <div className="text-4xl font-bold text-success mb-2">₹12L+</div>
-            <div className="text-text-secondary font-medium">Fraud Prevented</div>
-          </div>
-          <div>
-            <div className="text-4xl font-bold text-accent mb-2">87%</div>
-            <div className="text-text-secondary font-medium">Auto Approvals</div>
-          </div>
-          <div>
-            <div className="text-4xl font-bold text-primary mb-2">92%</div>
-            <div className="text-text-secondary font-medium">Detection Accuracy</div>
-          </div>
-          <div>
-            <div className="text-4xl font-bold text-primary mb-2">4.5s</div>
-            <div className="text-text-secondary font-medium">Avg Review Time</div>
+        {/* Admin Portal Card */}
+        <div 
+          onClick={() => navigate('/admin')}
+          className="group relative cursor-pointer"
+        >
+          <div className="absolute -inset-0.5 bg-gradient-to-r from-danger to-warning rounded-3xl blur opacity-20 group-hover:opacity-40 transition duration-500"></div>
+          <div className="relative card h-full p-8 flex flex-col items-center text-center transition-all duration-300 group-hover:translate-y-[-4px] group-hover:bg-bg-hover">
+            <div className="w-16 h-16 rounded-2xl bg-bg-secondary flex items-center justify-center text-danger mb-6 group-hover:scale-110 transition-transform duration-500">
+              <LayoutDashboard size={32} />
+            </div>
+            <h2 className="text-2xl font-bold mb-3">Admin Dashboard</h2>
+            <p className="text-text-secondary text-sm leading-relaxed mb-8">
+              Access real-time forensic intelligence. Monitor claims, review image forensics, and oversee AI-automated approvals.
+            </p>
+            <div className="mt-auto flex items-center gap-2 text-danger font-semibold group-hover:gap-3 transition-all">
+              Access Admin <ChevronRight size={18} />
+            </div>
           </div>
         </div>
-      </section>
 
-      {/* Feature Grid */}
-      <section className="container py-24">
-        <h2 className="text-3xl font-bold text-center mb-16">Enterprise-Grade Intelligence</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          <FeatureCard icon={<Activity />} title="Behavioral DNA Intelligence" desc="Track return frequency, high-value abuse, and dynamic deadline exploitation." />
-          <FeatureCard icon={<Camera />} title="Image Forensics" desc="Detect duplicate images, metadata mismatches, and edited proof photos." />
-          <FeatureCard icon={<Network />} title="Network Fraud Detection" desc="Identify shared devices, IP addresses, and linked flagged accounts." />
-          <FeatureCard icon={<TrendingUp />} title="Adaptive Risk Scoring" desc="Real-time multi-dimensional risk scoring combining behavior, images, and network." />
-          <FeatureCard icon={<Search />} title="Explainable AI Decisions" desc="Transparent reasoning for every blocked or reviewed return." />
-          <FeatureCard icon={<ShieldCheck />} title="Fraud Operations Dashboard" desc="Premium internal dashboard for your fraud review team." />
-        </div>
-      </section>
+      </div>
 
-      {/* Pitch Banner */}
-      <section className="container py-20 text-center">
-        <div className="card glass inline-block max-w-3xl">
-          <h3 className="text-2xl font-semibold mb-4 text-warning">Strategic Policy Abuse Prevention</h3>
-          <p className="text-lg text-text-secondary">
-            We don't just detect fake returns. We detect strategic abuse of <strong className="text-white">any return policy window</strong> before refunds happen.
-          </p>
-        </div>
-      </section>
+      {/* Footer Branding */}
+      <div className="mt-20 opacity-30 text-xs font-mono tracking-widest uppercase animate-fade-in" style={{animationDelay: '0.4s'}}>
+        System v2.0 // Secured by HackHustle
+      </div>
     </div>
   );
 };
 
-const FeatureCard = ({ icon, title, desc }) => (
-  <div className="card flex flex-col items-start gap-4">
-    <div className="p-3 bg-bg-secondary rounded-lg text-accent">
-      {icon}
-    </div>
-    <h3 className="text-xl font-semibold">{title}</h3>
-    <p className="text-text-secondary">{desc}</p>
-  </div>
-);
-
 export default Landing;
+

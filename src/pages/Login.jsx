@@ -7,9 +7,18 @@ const Login = () => {
   const navigate = useNavigate();
 
   const handleLogin = (customer) => {
-    localStorage.setItem('loggedInUser', JSON.stringify(customer));
+    // Inject simulated networking/security markers for testing
+    const enrichedCustomer = {
+      ...customer,
+      ipAddress: customer.id === 'USR-003' ? '10.0.0.10' : '10.0.0.1', // Simulate a high-risk IP for specific personas
+      location: customer.id === 'USR-003' ? 'City10' : 'City1',
+      addressHash: customer.id === 'USR-003' ? 'ADDR-99999' : 'ADDR-12345',
+      deviceId: `DEV-${Math.floor(Math.random()*100000)}`
+    };
+    localStorage.setItem('loggedInUser', JSON.stringify(enrichedCustomer));
     navigate('/customer');
   };
+
 
   return (
     <div className="min-h-screen bg-bg-primary flex flex-col items-center justify-center p-4">
@@ -48,10 +57,10 @@ const Login = () => {
 
           <div className="mt-8 pt-6 border-t border-border-color text-center">
             <button 
-              onClick={() => navigate('/admin')}
-              className="text-sm text-accent hover:underline font-medium"
+              onClick={() => navigate('/')}
+              className="text-sm text-text-muted hover:text-white font-medium transition-colors"
             >
-              Access Admin Fraud Portal Instead
+              ← Back to Portal Selection
             </button>
           </div>
         </div>

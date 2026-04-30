@@ -20,7 +20,6 @@ export const MOCK_CUSTOMERS = [
     addressHash: 'ADDR-12345',
     linkedAccounts: 1,
     networkRisk: 5,
-    imageRisk: 10,
     history: [
       { product: 'MacBook Air', category: 'Electronics', policy: 7, returnedOn: 2, amount: 90000, date: '2025-12-10' },
       { product: 'USB-C Hub', category: 'Electronics', policy: 7, returnedOn: 3, amount: 2500, date: '2026-01-15' }
@@ -44,7 +43,6 @@ export const MOCK_CUSTOMERS = [
     addressHash: 'ADDR-99999', // HIGH RETURN ADDRESS
     linkedAccounts: 5,
     networkRisk: 85,
-    imageRisk: 90,
     history: [
       { product: 'Sony Headphones', category: 'Electronics', policy: 7, returnedOn: 7, amount: 12000, date: '2026-04-05' }
     ],
@@ -64,7 +62,6 @@ export const MOCK_CUSTOMERS = [
     previousFlags: 0,
     trustScore: 70,
     networkRisk: 25,
-    imageRisk: 15,
     history: [
       { product: 'T-Shirt', category: 'Fashion', policy: 14, returnedOn: 13, amount: 1200, date: '2026-03-20' },
       { product: 'Jeans', category: 'Fashion', policy: 14, returnedOn: 5, amount: 2500, date: '2026-04-01' },
@@ -86,7 +83,6 @@ export const MOCK_CUSTOMERS = [
     previousFlags: 0,
     trustScore: 85,
     networkRisk: 10,
-    imageRisk: 5,
     history: [],
     orders: [
       { id: 'ORD-401', product: 'Ray-Ban Aviators', category: 'Accessories', amount: '₹6,200', purchaseDate: '2026-04-20', policyDays: 10 },
@@ -104,7 +100,6 @@ export const MOCK_CUSTOMERS = [
     previousFlags: 0,
     trustScore: 90,
     networkRisk: 5,
-    imageRisk: 5,
     history: [],
     orders: [
       { id: 'ORD-501', product: 'Sony WH-1000XM5', category: 'Electronics', amount: '₹28,000', purchaseDate: '2026-04-22', policyDays: 7 },
@@ -122,7 +117,6 @@ export const MOCK_CUSTOMERS = [
     previousFlags: 0,
     trustScore: 80,
     networkRisk: 15,
-    imageRisk: 10,
     history: [],
     orders: [
       { id: 'ORD-601', product: 'Zara Evening Dress', category: 'Fashion', amount: '₹4,500', purchaseDate: '2026-04-18', policyDays: 14 },
@@ -140,7 +134,6 @@ export const MOCK_CUSTOMERS = [
     previousFlags: 0,
     trustScore: 50,
     networkRisk: 40,
-    imageRisk: 20,
     history: [],
     orders: [
       { id: 'ORD-701', product: 'Whole Wheat Bread', category: 'Grocery', amount: '₹60', purchaseDate: '2026-04-29', policyDays: 3 }
@@ -157,7 +150,6 @@ export const MOCK_CUSTOMERS = [
     previousFlags: 0,
     trustScore: 88,
     networkRisk: 10,
-    imageRisk: 5,
     history: [],
     orders: [
       { id: 'ORD-801', product: 'Leather Wallet', category: 'Accessories', amount: '₹1,500', purchaseDate: '2026-04-24', policyDays: 10 },
@@ -175,7 +167,6 @@ export const MOCK_CUSTOMERS = [
     previousFlags: 0,
     trustScore: 96,
     networkRisk: 5,
-    imageRisk: 0,
     history: [],
     orders: [
       { id: 'ORD-901', product: 'Samsung S23 Ultra', category: 'Electronics', amount: '₹1,10,000', purchaseDate: '2026-04-24', policyDays: 7 }
@@ -192,7 +183,6 @@ export const MOCK_CUSTOMERS = [
     previousFlags: 0,
     trustScore: 78,
     networkRisk: 20,
-    imageRisk: 15,
     history: [],
     orders: [
       { id: 'ORD-1001', product: 'Floral Saree', category: 'Fashion', amount: '₹2,500', purchaseDate: '2026-04-19', policyDays: 14 }

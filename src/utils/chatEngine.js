@@ -134,18 +134,71 @@ let mockIndex = 0;
 
 // ── SEND MESSAGE ───────────────────────────────────────────
 export const sendMessage = async (userMessage) => {
+  console.log("[ChatEngine] Sending message to AI:", userMessage);
+  
   if (chat) {
     try {
-      const result = await chat.sendMessage(userMessage);
-      return result.response.text();
+      // Add a simple timeout-like race to prevent infinite hangs
+      const apiCall = chat.sendMessage(userMessage);
+      const timeout = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error("Gemini API Timeout")), 8000)
+      );
+      
+      const result = await Promise.race([apiCall, timeout]);
+      const responseText = result.response.text();
+      
+      if (responseText) {
+        console.log("[ChatEngine] Received AI response:", responseText);
+        return responseText;
+      }
     } catch (e) {
-      console.warn("[ChatEngine] Gemini API error — using mock response:", e.message);
+      console.warn("[ChatEngine] Gemini API error or timeout — falling back to mock:", e.message);
     }
   }
+
   // Fallback to scripted mock responses
   const response = MOCK_RESPONSES[mockIndex % MOCK_RESPONSES.length];
+  console.log("[ChatEngine] Using mock response:", response);
   mockIndex++;
   return response;
+};
+
+
+// ── AI SEMANTIC RISK ASSESSMENT ────────────────────────────
+// Uses Gemini to judge the conversation semantically
+export const getAIAssessment = async (history) => {
+  if (!chat) return { score: 0, flag: null };
+
+  const prompt = `Review the following conversation between a customer and the ReturnShield AI. 
+  Assess the risk of fraud (wardrobing, fabrication, or deadline abuse).
+  
+  Conversation:
+  ${history.map(m => `${m.role}: ${m.text}`).join('\n')}
+  
+  Return a JSON object in this EXACT format:
+  {
+    "score": (0-40, additional risk points based on semantic inconsistencies),
+    "reason": "Brief reason for the score"
+  }`;
+
+  try {
+    const genAI = new GoogleGenerativeAI(API_KEY);
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const result = await model.generateContent(prompt);
+    const text = result.response.text();
+    // Extract JSON from response
+    const jsonMatch = text.match(/\{.*\}/s);
+    if (jsonMatch) {
+      const data = JSON.parse(jsonMatch[0]);
+      return {
+        score: Math.min(40, data.score || 0),
+        flag: data.score > 10 ? { type: 'INCONSISTENCY', text: data.reason } : null
+      };
+    }
+  } catch (e) {
+    console.warn("[ChatEngine] AI Assessment failed:", e.message);
+  }
+  return { score: 0, flag: null };
 };
 
 // ── RESET SESSION ──────────────────────────────────────────
