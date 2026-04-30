@@ -1,16 +1,17 @@
 import React from 'react';
-import { ShieldCheck, TrendingUp, AlertTriangle, Search, MessageSquare, LayoutDashboard, Camera, Network, FileText } from 'lucide-react';
+import { ShieldCheck, TrendingUp, AlertTriangle, Search, MessageSquare, LayoutDashboard, Camera, Network, FileText, MousePointerClick } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 
 const AdminLayout = ({ children }) => {
   const location = useLocation();
 
   const menuItems = [
-    { name: 'Claims Queue', path: '/admin', icon: LayoutDashboard },
-    { name: 'Behavioral DNA', path: '/admin/behavioral', icon: TrendingUp },
-    { name: 'Vision Forensics', path: '/admin/vision', icon: Camera },
-    { name: 'Network Risk', path: '/admin/network', icon: Network },
-    { name: 'AI Chat Logs', path: '/admin/chats', icon: MessageSquare },
+    { name: 'Claims Queue',       path: '/admin',              icon: LayoutDashboard },
+    { name: 'Behavioral DNA',     path: '/admin/behavioral',   icon: TrendingUp },
+    { name: 'Vision Forensics',   path: '/admin/vision',       icon: Camera },
+    { name: 'Network Risk',       path: '/admin/network',      icon: Network },
+    { name: 'AI Chat Logs',       path: '/admin/chats',        icon: MessageSquare },
+    { name: 'Pre-Purchase AI',    path: '/admin/prepurchase',  icon: MousePointerClick },
   ];
 
   return (

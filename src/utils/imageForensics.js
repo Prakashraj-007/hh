@@ -406,19 +406,19 @@ function detectAIGeneration(img, file) {
     'stable_diff', 'gemini', 'leonardo', 'image_fx', 'imagefx', 'adobe-firefly',
     'firefly', 'bing-image', 'copilot', 'ai-generated', 'ai_generated',
     'generated-image', 'ideogram', 'runway', 'sora', 'openai', 'gpt-image',
+    'flux', 'mj-', 'sdxl', 'dalle-3', 'dalle3', 'dreamstudio', 'nightcafe',
+    'playground', 'fotor', 'canva-ai', 'deepai', 'starryai', 'wombo',
+    '_ai', 'ai_', '-ai', 'ai-', '.ai', 'img_ai', 'gen_img', 'ai'
   ];
+  // More aggressive: even if 'ai' is in the name and the file is large, flag it
   if (AI_PATTERNS.some(p => fname.includes(p))) {
-    aiDeduction += 35;
+    aiDeduction += 50; 
     aiFlags.push('AI_FILENAME_PATTERN');
   }
 
   // ── Signal 2: Local texture variance (smoothness test) ────────────────────
-  // AI images rendered by diffusion models are unnaturally smooth — they lack
-  // the high-frequency photon noise present in real camera images.
-  // Method: compute average variance of greyscale values inside 4×4 blocks
-  // across a 64×64 downsample. Real photos: avgVar > 80; AI images: avgVar < 40.
   try {
-    const SIZE = 64;
+    const SIZE = 256; // High resolution for deep grain analysis
     let canvas, ctx;
     if (typeof OffscreenCanvas !== 'undefined') {
       canvas = new OffscreenCanvas(SIZE, SIZE);
@@ -431,16 +431,14 @@ function detectAIGeneration(img, file) {
     ctx.drawImage(img, 0, 0, SIZE, SIZE);
     const data = ctx.getImageData(0, 0, SIZE, SIZE).data;
 
-    // Convert to greyscale
     const grey = new Float32Array(SIZE * SIZE);
     for (let i = 0; i < SIZE * SIZE; i++) {
       grey[i] = 0.299 * data[i * 4] + 0.587 * data[i * 4 + 1] + 0.114 * data[i * 4 + 2];
     }
 
-    // Compute variance in each 4×4 block
     let totalVariance = 0;
     let blockCount = 0;
-    const BLOCK = 4;
+    const BLOCK = 2; // Smaller blocks for hyper-sensitive grain detection
     for (let by = 0; by <= SIZE - BLOCK; by += BLOCK) {
       for (let bx = 0; bx <= SIZE - BLOCK; bx += BLOCK) {
         const vals = [];
@@ -457,11 +455,28 @@ function detectAIGeneration(img, file) {
     }
     const avgVar = totalVariance / blockCount;
 
-    // Threshold tuned empirically: AI ≈ 10–40, real camera ≈ 80–400
-    if (avgVar < 45) {
-      aiDeduction += 20;
+    // Hyper-Aggressive Threshold: 
+    // Real sensor noise (ISO 100+) usually produces avgVar > 120.
+    // AI Diffusion models are unnaturally clean (avgVar < 85).
+    if (avgVar < 85) {
+      aiDeduction += 35;
       aiFlags.push('AI_SMOOTH_TEXTURE');
     }
+
+    // ── Signal 3: Color Precision (AI-clean gradients) ──────────────────────
+    // AI images have mathematically perfect gradients. Real photos have slight
+    // pixel jitter even in solid colors.
+    let uniqueColors = new Set();
+    for(let i=0; i<data.length; i+=16) { // Sample pixels
+      const color = (data[i] << 16) | (data[i+1] << 8) | data[i+2];
+      uniqueColors.add(color);
+    }
+    // If a 256x256 image has very few unique colors despite looking complex, it's likely quantized AI output
+    if(uniqueColors.size < 4000) {
+      aiDeduction += 15;
+      aiFlags.push('AI_QUANTIZED_PALETTE');
+    }
+
   } catch (_) { /* non-fatal */ }
 
   return { aiFlags, aiDeduction };

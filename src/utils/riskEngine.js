@@ -1,6 +1,6 @@
 import modelThresholds from '../data/model_thresholds.json';
 
-export const calculateRiskScore = (claim, userProfile, existingClaims = [], wardrobingIntent = null) => {
+export const calculateRiskScore = (claim, userProfile, existingClaims = [], wardrobingIntent = null, purchaseBehavior = null) => {
   let logs = [];
   const { thresholds, category_risk, ip_risk_map, ip_density_map, location_risk, reason_risk } = modelThresholds;
 
@@ -134,16 +134,23 @@ export const calculateRiskScore = (claim, userProfile, existingClaims = [], ward
     wardrobingIntent?.flags?.forEach(f => logs.push(`[AI Chat] ${f}`));
   }
 
+  // 5. Pre-Purchase Behavior Engine
+  const prePurchaseScore = purchaseBehavior?.behaviorIntentScore || 0;
+  if (prePurchaseScore > 0 && purchaseBehavior?.signals) {
+    purchaseBehavior.signals.forEach(s => logs.push(s));
+  }
+
   // Final Aggregation
   const behaviorScore = Math.min(100, Object.values(behaviorBreakdown).reduce((a, b) => a + b, 0));
   const networkScore = Math.min(100, Object.values(networkBreakdown).reduce((a, b) => a + b, 0));
 
-  // Weights: Behavior (35%), Network (25%), Wardrobing (15%), Image (25%)
+  // Weights: Behavior (30%), Network (20%), Wardrobing (15%), Image (20%), PrePurchase (15%)
   const finalScore = Math.round(
-    (behaviorScore * 0.35) +
-    (networkScore * 0.25) +
+    (behaviorScore  * 0.30) +
+    (networkScore   * 0.20) +
     (wardrobingScore * 0.15) +
-    (imageScore * 0.25)
+    (imageScore     * 0.20) +
+    (prePurchaseScore * 0.15)
   );
 
   let status = 'Approved';
@@ -159,12 +166,15 @@ export const calculateRiskScore = (claim, userProfile, existingClaims = [], ward
   return {
     score: Math.round(finalScore),
     behaviorScore,
-    behaviorBreakdown, 
+    behaviorBreakdown,
     networkScore,
-    networkBreakdown, 
+    networkBreakdown,
     wardrobingScore,
-    wardrobingBreakdown: wardrobingIntent?.intentBreakdown || null, 
+    wardrobingBreakdown: wardrobingIntent?.intentBreakdown || null,
     imageScore,
+    prePurchaseScore,
+    prePurchaseBreakdown: purchaseBehavior?.breakdown || null,
+    prePurchaseRisk: purchaseBehavior?.purchaseBehaviorRisk || 'Unknown',
     riskLevel,
     status,
     logs

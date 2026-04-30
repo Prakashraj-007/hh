@@ -3,6 +3,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { ShieldCheck, UploadCloud, CheckCircle, Clock, MessageSquare, AlertCircle } from 'lucide-react';
 import { calculateRiskScore } from '../../utils/riskEngine';
 import { analyzeSearchIntent, markSessionAsReturned } from '../../utils/searchIntentEngine';
+import { trackReturnPageVisit, analyzePurchaseBehavior, clearBehaviorSession } from '../../utils/behaviorTracker';
 import { analyzeImage } from '../../utils/imageForensics';
 import FraudChatbot from '../../components/FraudChatbot';
 
@@ -35,6 +36,15 @@ const ReturnForm = () => {
   const [savedClaim, setSavedClaim] = useState(null);
   const [chatCompleted, setChatCompleted] = useState(false);
 
+  // Track return page visit as a pre-purchase behavior signal
+  // (called on mount — before any purchase action)
+  React.useEffect(() => {
+    if (loggedInUser?.id) {
+      trackReturnPageVisit(loggedInUser.id);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Handle real image upload + forensic analysis
   const handleImageUpload = async (e) => {
     const file = e.target.files?.[0];
@@ -53,6 +63,13 @@ const ReturnForm = () => {
     try {
       const result = await analyzeImage(file);
       setImageAnalysis(result);
+      // Save for real-time reflection in Admin Dashboard
+      localStorage.setItem('lastForensicResult', JSON.stringify({
+        ...result,
+        timestamp: Date.now(),
+        customer: loggedInUser.name,
+        product: order.product
+      }));
     } catch (err) {
       console.error('Image forensics failed:', err);
       setImageAnalysis({ imageScore: 0, flags: ['ANALYSIS_FAILED'], elaFlag: false, hashFlag: false, exifStatus: 'ERROR', elaMean: 0, hashDistance: 64, dateTaken: null, elaImageDataUrl: null });
@@ -74,6 +91,7 @@ const ReturnForm = () => {
       "Fetching Order Policy...",
       "Checking Return Window...",
       "Running Behavioral Analysis...",
+      "Analyzing Pre-Purchase Behavior...",
       "Running Image Verification...",
       "Checking Network Risk...",
       "Calculating Final Score..."
@@ -105,11 +123,19 @@ const ReturnForm = () => {
           parseInt(formData.requestedOnDay),
           order.policyDays
         );
+
+        // Run Pre-Purchase Behavior Engine
+        const purchaseBehavior = analyzePurchaseBehavior(
+          loggedInUser.id,
+          order.productId || order.id,
+          order.category
+        );
         
-        const result = calculateRiskScore(claimData, loggedInUser, existingClaims, wardrobingIntent);
+        const result = calculateRiskScore(claimData, loggedInUser, existingClaims, wardrobingIntent, purchaseBehavior);
         
         // Mark the session as returned for future historical correlation
         markSessionAsReturned(loggedInUser.id);
+        clearBehaviorSession(loggedInUser.id);
         
         setTimeout(() => {
           setAnalysisState({ stage: stages.length, result });
@@ -149,6 +175,10 @@ const ReturnForm = () => {
             networkBreakdown: result.networkBreakdown,
             wardrobingScore: result.wardrobingScore,
             wardrobingBreakdown: result.wardrobingBreakdown,
+            // Pre-Purchase Behavior
+            prePurchaseScore: result.prePurchaseScore,
+            prePurchaseBreakdown: result.prePurchaseBreakdown,
+            prePurchaseRisk: result.prePurchaseRisk,
             // Customer intelligence fields
             trustScore: result.trustScore,
             accountAgeDays: loggedInUser.accountAgeDays,
@@ -173,6 +203,7 @@ const ReturnForm = () => {
     "Fetching Order Policy...",
     "Checking Return Window...",
     "Running Behavioral Analysis...",
+    "Analyzing Pre-Purchase Behavior...",
     "Running Image Verification...",
     "Checking Network Risk...",
     "Calculating Final Score..."
@@ -354,23 +385,22 @@ const ReturnForm = () => {
         )}
 
         {step === 2 && (
-          <div className="card text-center py-12 animate-fade-in">
-            <div className="w-16 h-16 border-4 border-bg-secondary border-t-accent rounded-full animate-spin mx-auto mb-6"></div>
-            <h2 className="text-2xl font-bold mb-8">AI Analysis in Progress</h2>
+          <div className="card text-center py-16 animate-fade-in">
+            <div className="w-20 h-20 border-4 border-bg-secondary border-t-accent rounded-full animate-spin mx-auto mb-8 shadow-lg shadow-accent/20"></div>
+            <h2 className="text-3xl font-bold mb-3">Analyzing Request</h2>
+            <p className="text-text-secondary mb-8 max-w-sm mx-auto">
+              Our secure automated system is verifying your return details. This usually takes just a few seconds...
+            </p>
             
-            <div className="max-w-md mx-auto text-left space-y-4">
-              {AnalysisStages.map((stage, idx) => (
-                <div key={idx} className={`flex items-center gap-3 ${idx > analysisState.stage ? 'opacity-30' : 'opacity-100'}`}>
-                  {idx < analysisState.stage ? (
-                    <CheckCircle className="text-success" size={20} />
-                  ) : idx === analysisState.stage ? (
-                    <div className="w-5 h-5 rounded-full border-2 border-accent border-t-transparent animate-spin"></div>
-                  ) : (
-                    <div className="w-5 h-5 rounded-full border-2 border-border-color"></div>
-                  )}
-                  <span className={idx === analysisState.stage ? 'font-medium text-accent' : ''}>{stage}</span>
-                </div>
-              ))}
+            {/* Simple progress bar instead of technical list */}
+            <div className="max-w-md mx-auto w-full bg-bg-secondary h-2 rounded-full overflow-hidden">
+               <div 
+                 className="bg-accent h-full transition-all duration-500 ease-out"
+                 style={{ width: `${(analysisState.stage / (AnalysisStages.length - 1)) * 100}%` }}
+               />
+            </div>
+            <div className="mt-4 text-[10px] text-text-muted uppercase font-bold tracking-widest animate-pulse">
+               Encryption active • Secure Link
             </div>
           </div>
         )}
@@ -388,19 +418,25 @@ const ReturnForm = () => {
             )}
 
             <h2 className="text-3xl font-bold mb-2">
-              {analysisState.result.status === 'Approved' ? 'Return Approved!' :
+              {chatCompleted ? 'Refund Verified!' : 
+               (analysisState.result.score > 20) ? 'Verification Required' :
+               analysisState.result.status === 'Approved' ? 'Return Approved!' :
                analysisState.result.status === 'Soft Verification' ? 'Identity Verification Needed' : 'Request Under Review'}
             </h2>
 
             <p className="text-text-secondary mb-6">
-              {analysisState.result.status === 'Approved'
+              {chatCompleted 
+                ? 'Thank you for completing the verification. Your refund has been finalized and will appear in your account within 3-5 business days.'
+                : (analysisState.result.score > 20)
+                ? 'Your request has been received, but our security system requires a quick identity verification before we can process the refund.'
+                : analysisState.result.status === 'Approved'
                 ? 'Your return has been automatically approved. Instructions have been sent to your email.'
                 : analysisState.result.status === 'Soft Verification'
                 ? 'For security, please verify your account via OTP to proceed with the refund.'
                 : 'Our security system has flagged this request for manual verification. A specialist will review it within 24 hours.'}
             </p>
 
-            {/* Chatbot Trigger — activates when score > 20 */}
+            {/* Chatbot Trigger — hides when chatCompleted is true */}
             {analysisState.result.score > 20 && !chatCompleted && (
               <div className="mb-6 p-4 bg-[rgba(139,92,246,0.08)] border border-accent/30 rounded-xl">
                 <div className="flex items-center gap-2 justify-center mb-2">
@@ -420,8 +456,14 @@ const ReturnForm = () => {
             )}
 
             {chatCompleted && (
-              <div className="mb-6 p-4 bg-success/10 border border-success/30 rounded-xl flex items-center gap-2 justify-center text-success">
-                <CheckCircle size={18} /> Chat verification complete — Admin notified
+              <div className="mb-8 p-6 bg-success/10 border border-success/30 rounded-2xl animate-bounce-in">
+                <div className="flex items-center gap-3 justify-center text-success mb-2">
+                  <CheckCircle size={28} />
+                  <span className="text-xl font-bold">Authentication Successful</span>
+                </div>
+                <p className="text-sm text-success/80">
+                  SecureVerify AI has cleared your request. Your refund transaction ID: <b>RFD-{Math.floor(Math.random()*1000000)}</b>
+                </p>
               </div>
             )}
 

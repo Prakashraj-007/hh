@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ShieldCheck, TrendingUp, AlertTriangle, Search, X, AlertCircle, FileText, Camera, Network, Clock, User, CheckCircle, MessageSquare, ExternalLink, Download } from 'lucide-react';
+import { ShieldCheck, TrendingUp, AlertTriangle, Search, X, AlertCircle, FileText, Camera, Network, Clock, User, CheckCircle, MessageSquare, ExternalLink, Download, MousePointerClick } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import AdminLayout from './AdminLayout';
 
@@ -20,6 +20,7 @@ const AdminDashboard = () => {
     localStorage.removeItem('claims');
     localStorage.removeItem('chatSessions');
     localStorage.removeItem('imageHashes');
+    localStorage.removeItem('lastForensicResult');
     setClaims([]);
     setChatSessions([]);
     window.location.reload();
@@ -244,7 +245,7 @@ const AdminDashboard = () => {
 
             <div className="p-5 flex flex-col gap-5">
               {/* Score breakdown with Deep Dive links */}
-              <div className="grid grid-cols-4 gap-3">
+              <div className="grid grid-cols-5 gap-3">
                 <Link to="/admin/behavioral" className="card bg-bg-secondary hover:bg-bg-hover transition p-3 text-center border-l-4 border-accent">
                   <div className="text-[10px] text-text-muted uppercase font-bold mb-1">Behavior</div>
                   <div className="text-xl font-bold">{selectedClaim.behaviorScore}</div>
@@ -263,6 +264,16 @@ const AdminDashboard = () => {
                   <div className="text-[10px] text-text-muted uppercase font-bold mb-1">Network</div>
                   <div className="text-xl font-bold">{selectedClaim.networkScore}</div>
                   <div className="text-[8px] text-blue-400 mt-1 flex items-center justify-center gap-1">
+                    Deep Dive <ExternalLink size={8} />
+                  </div>
+                </Link>
+                <Link to="/admin/prepurchase" className="card bg-bg-secondary hover:bg-bg-hover transition p-3 text-center border-l-4 border-green-400">
+                  <div className="text-[10px] text-text-muted uppercase font-bold mb-1">Pre-Buy</div>
+                  <div className={`text-xl font-bold ${
+                    (selectedClaim.prePurchaseScore || 0) >= 60 ? 'text-danger' :
+                    (selectedClaim.prePurchaseScore || 0) >= 30 ? 'text-warning' : 'text-success'
+                  }`}>{selectedClaim.prePurchaseScore ?? '–'}</div>
+                  <div className="text-[8px] text-green-400 mt-1 flex items-center justify-center gap-1">
                     Deep Dive <ExternalLink size={8} />
                   </div>
                 </Link>

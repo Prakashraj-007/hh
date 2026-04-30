@@ -9,6 +9,7 @@ import BehavioralDeepDive from './pages/admin/BehavioralDeepDive';
 import VisionDeepDive from './pages/admin/VisionDeepDive';
 import NetworkDeepDive from './pages/admin/NetworkDeepDive';
 import ChatDeepDive from './pages/admin/ChatDeepDive';
+import PrePurchaseDeepDive from './pages/admin/PrePurchaseDeepDive';
 
 function App() {
   return (
@@ -26,6 +27,7 @@ function App() {
         <Route path="/admin/vision" element={<VisionDeepDive />} />
         <Route path="/admin/network" element={<NetworkDeepDive />} />
         <Route path="/admin/chats" element={<ChatDeepDive />} />
+        <Route path="/admin/prepurchase" element={<PrePurchaseDeepDive />} />
       </Routes>
     </Router>
   );
